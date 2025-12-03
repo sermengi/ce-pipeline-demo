@@ -1,0 +1,56 @@
+name: Continuous Evaluation on Model Change
+
+on:
+  push:
+    paths:
+      - "models/**"
+
+jobs:
+  ce_on_model_change:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Find changed model manifests
+        id: diff
+        run: |
+          # Compare with the previous commit to get changed files under models/**
+          BEFORE_SHA="${{ github.event.before }}"
+          AFTER_SHA="${{ github.sha }}"
+
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            # New branch or initial commit, just list all models
+            CHANGED=$(ls models/*.yaml 2>/dev/null || true)
+          else
+            CHANGED=$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" -- 'models/**' || true)
+          fi
+
+          echo "Changed model files:"
+          echo "$CHANGED"
+
+          # Join with space for script arguments
+          CHANGED_SPACED=$(echo "$CHANGED" | tr '\n' ' ')
+
+          echo "files=$CHANGED_SPACED" >> "$GITHUB_OUTPUT"
+
+      - name: Run Continuous Evaluation demo
+        run: |
+          if [ -z "${{ steps.diff.outputs.files }}" ]; then
+            echo "No changed model manifests detected. Skipping CE."
+            exit 0
+          fi
+
+          echo "Running CE for manifests: ${{ steps.diff.outputs.files }}"
+          python scripts/run_ce_demo.py ${{ steps.diff.outputs.files }}
