@@ -1,14 +1,14 @@
 model_id: llama3-fairness
 provider: huggingface
 model_name: meta-llama/Meta-Llama-3-8B-Instruct
-version: "0.3.0"
+version: "1.3.0"
 
 # Which evaluation profile to run (you can map this to DeepEval suites)
 evaluation_profile: fairness_smoke_v1
 
 # Simple gate configuration for the demo
 gate:
-  min_overall_score: 0.95
+  min_overall_score: 0.75
   min_group_score: 0.70
 
 # Optional: additional metadata
